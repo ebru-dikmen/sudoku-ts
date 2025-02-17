@@ -1,0 +1,356 @@
+<template>
+  <div class="container">
+    <h1 class="header">Sudoku Game</h1>
+  </div>
+  <div class="container">
+    <div class="difficulty">
+      <select v-model="difficulty" @change="selectDifficulty">
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+      </select>
+    </div>
+    <h4>Score: {{ score }}</h4>
+    <h4>Time Spent: {{ timeSpent }}</h4>
+    <button @click="pauseTimer"><span>⏸️</span></button>
+    <button
+      class="button"
+      @click="showHintIfAvailable"
+      :disabled="gameFinished"
+    >
+      Hint ({{ 10 - hintCellCount }})
+    </button>
+    <button class="button" @click="resetGame">Restart</button>
+  </div>
+
+  <div class="container" v-if="!gameFinished">
+    <Board
+      :initialBoard="board"
+      :timeSpent="timeSpent"
+      @updateScore="handleScoreUpdate"
+      @gameFinished="handleFinishedGame"
+      @updateHintCellCount="handleHintCellCount"
+      @digitNotAvailable="handleDigitNotAvailable"
+      ref="hint"
+    />
+  </div>
+  <div class="container">
+    <transition name="fade">
+      <div v-if="displayAnimation" class="game-over-message">
+        <h1>Game Over</h1>
+        <p>Your Score: {{ score }}</p>
+        <button @click="resetGame">Restart</button>
+      </div>
+    </transition>
+  </div>
+
+  <div class="digit-selection">
+    <button
+      class="digit-button"
+      v-for="digit in 9"
+      :key="digit"
+      :disabled="!availableDigits[digit - 1]"
+    >
+      {{ digit }}
+    </button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import Board from "./components/GameBoard.vue";
+import Cell from "./model/Cell";
+import { ref, onMounted, onUnmounted, Ref } from "vue";
+
+const score: Ref<number> = ref(0);
+// eslint-disable-next-line
+const hint: Ref<{ useHint: () => void }> = ref({ useHint: () => {} });
+const difficulty: Ref<string> = ref("beginner");
+const timeSpent: Ref<number> = ref(0);
+const hintCellCount: Ref<number> = ref(0);
+const gameFinished: Ref<boolean> = ref(false);
+const availableDigits: Ref<boolean[]> = ref(Array(9).fill(true));
+const displayAnimation = ref(false);
+const board: Ref<Cell[][]> = ref(
+  Array.from({ length: 9 }, () => Array(9).fill({}))
+);
+
+let intervalId = -1;
+
+let isTogglePause = ref(false);
+
+onMounted(() => {
+  // set default difficulty
+  difficulty.value = "beginner";
+
+  // initialize game
+  resetGame();
+});
+
+onUnmounted(() => {
+  stopTimer();
+});
+
+function selectDifficulty(event: Event): void {
+  const target = event.target as HTMLSelectElement;
+  if (target?.value) difficulty.value = target.value;
+}
+
+// initialize game
+function resetGame(): void {
+  // reset score
+  score.value = 0;
+
+  // reset available digits
+  availableDigits.value = Array(9).fill(true);
+
+  // hide animation
+  displayAnimation.value = false;
+
+  // reset game status
+  gameFinished.value = false;
+
+  setTimeout(() => {
+    resetTimer();
+    resetBoard();
+  }, 700);
+}
+
+function startTimer(): void {
+  intervalId = setInterval(() => {
+    timeSpent.value += 1;
+  }, 1000);
+}
+
+function stopTimer(): void {
+  if (intervalId !== -1) {
+    clearInterval(intervalId);
+  }
+}
+
+function resetTimer(): void {
+  stopTimer();
+  timeSpent.value = 0;
+  startTimer();
+}
+
+function pauseTimer() {
+  isTogglePause.value = !isTogglePause.value;
+  if (isTogglePause.value) {
+    stopTimer();
+  } else {
+    startTimer();
+  }
+}
+function resetBoard(): void {
+  board.value = createBoard();
+  applyDifficultyToBoard(board.value, difficulty.value);
+}
+
+function fillBoard(board: number[][], row: number, column: number): boolean {
+  if (column === 9) {
+    row++;
+    column = 0;
+  }
+  if (row === 9) return true;
+
+  let digits: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(
+    () => Math.random() - 0.5
+  );
+
+  for (let digit of digits) {
+    if (isValidMove(board, row, column, digit)) {
+      board[row][column] = digit;
+      if (fillBoard(board, row, column + 1)) return true;
+      board[row][column] = 0;
+    }
+  }
+  return false;
+}
+
+function createBoard(): Cell[][] {
+  let board: number[][] = Array.from({ length: 9 }, () => Array(9).fill(0));
+
+  fillBoard(board, 0, 0);
+
+  // Convert board to Cell matrix from number matrix
+  return board.map((row: number[]) =>
+    row.map(
+      (digit: number) =>
+        new Cell(digit, String(digit), true, false, false, false)
+    )
+  );
+}
+
+const handleFinishedGame = (isGameFinished: boolean) => {
+  gameFinished.value = isGameFinished;
+
+  if (gameFinished.value) {
+    stopTimer();
+    displayAnimation.value = true;
+  }
+};
+
+function applyDifficultyToBoard(board: Cell[][], difficulty: string): void {
+  let positions: number[][] = [];
+
+  board.forEach((row: Cell[], rowIndex: number) =>
+    row.forEach((cell: Cell, columnIndex: number) => {
+      positions.push([rowIndex, columnIndex]);
+    })
+  );
+
+  let fixedCellCount: number = getFixedCellCountByDifficulty(difficulty);
+
+  let playerCellCount: number = 81 - fixedCellCount;
+
+  positions.sort(() => Math.random() - 0.5);
+
+  let playerCells: number[][] = positions.slice(0, playerCellCount);
+
+  for (let [row, column] of playerCells) {
+    board[row][column] = new Cell(
+      board[row][column].actualValue,
+      "",
+      false,
+      false,
+      false,
+      false
+    );
+  }
+}
+
+function getFixedCellCountByDifficulty(difficulty: string): number {
+  switch (difficulty) {
+    case "beginner":
+      return Math.floor(Math.random() * (40 - 36 + 1)) + 36;
+    case "intermediate":
+      return Math.floor(Math.random() * (36 - 32 + 1)) + 32;
+    case "hard":
+      return Math.floor(Math.random() * (32 - 28 + 1)) + 28;
+    case "expert":
+      return Math.floor(Math.random() * (28 - 24 + 1)) + 24;
+    default:
+      return 32;
+  }
+}
+
+const handleScoreUpdate = (newScore: number) => (score.value = newScore);
+
+const handleHintCellCount = (newHintCellCount: number) =>
+  (hintCellCount.value = newHintCellCount);
+
+const handleDigitNotAvailable = (notAvailableDigit: number) =>
+  (availableDigits.value[notAvailableDigit - 1] = false);
+
+function showHintIfAvailable(): void {
+  if (hintCellCount.value >= 10) {
+    alert(
+      "You reached max number of hint usages! (max: 10, used:" +
+        hintCellCount.value +
+        ")"
+    );
+  } else if (hint.value) hint.value.useHint();
+}
+
+function isValidMove(
+  board: number[][],
+  row: number,
+  column: number,
+  digit: number
+): boolean {
+  for (let i = 0; i < 9; i++) {
+    if (board[row][i] === digit || board[i][column] === digit) return false;
+    let boxRow: number = 3 * Math.floor(row / 3) + Math.floor(i / 3);
+    let boxColumn: number = 3 * Math.floor(column / 3) + (i % 3);
+    if (board[boxRow][boxColumn] === digit) return false;
+  }
+  return true;
+}
+</script>
+
+<style>
+.container {
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  flex-wrap: wrap; /* Makes it responsive */
+  gap: 0.5rem;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background-color: rgb(235, 222, 32);
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+.digit-selection {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  pointer-events: none;
+}
+.digit-button {
+  margin: 0.9375rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 1rem;
+}
+.button {
+  margin: 0.9375rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 1rem;
+  background-color: #0c3e77;
+  color: white;
+  border: none;
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: all 0.3s ease-in-out;
+}
+
+.button:hover {
+  background-color: #0056b3;
+}
+
+select {
+  padding: 0.3125rem;
+  font-size: 1rem;
+  height: 2.7em;
+}
+
+.difficulty {
+  display: flex;
+  justify-content: center;
+  max-height: auto;
+}
+
+.game-over-message {
+  background: rgb(235, 222, 32);
+  color: white;
+  padding: 3.125rem;
+  border-radius: 0.625rem;
+  display: inline-block;
+  justify-content: center;
+}
+
+/* Animation */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.8s ease-in-out, transform 0.5s;
+}
+.fade-enter-from {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.fade-leave-to {
+  opacity: 0;
+  transform: scale(1.5);
+}
+</style>
