@@ -3,6 +3,14 @@
     <h1 class="header">Sudoku Game</h1>
   </div>
   <div class="container">
+    <div>
+      <input
+        type="text"
+        v-model="playerName"
+        placeholder="Player Name"
+        class="player-name-input"
+      />
+    </div>
     <div class="difficulty">
       <select
         v-model="difficulty"
@@ -84,7 +92,15 @@ const board: Ref<Cell[][]> = ref(
 );
 let intervalId = -1;
 let isTriggerPause = ref(false);
-
+let playerName = ref("");
+const leadership: Ref<
+  { playerScore: number; name: string; playerDifficulty: string }[]
+> = ref([]);
+let playerResult = ref({
+  playerScore: 0,
+  name: "",
+  playerDifficulty: "beginner",
+});
 onMounted(() => {
   // set default difficulty
   difficulty.value = "beginner";
@@ -104,6 +120,15 @@ function selectDifficulty(event: Event): void {
 
 // initialize game
 function resetGame(): void {
+  if (playerName.value) {
+    console.log("Starting game for player:", playerName.value);
+    // Initialize game with playerName or any other logic you want
+  } else {
+    alert("Please enter your name");
+  }
+  if (displayAnimation.value) {
+    displayAnimation.value = false;
+  }
   // reset score
   score.value = 0;
 
@@ -190,11 +215,18 @@ function createBoard(): Cell[][] {
 
 const handleFinishedGame = (isGameFinished: boolean) => {
   gameFinished.value = isGameFinished;
-
+  playerResult.value = {
+    playerScore: score.value,
+    name: playerName.value,
+    playerDifficulty: difficulty.value,
+  };
   if (gameFinished.value) {
     stopTimer();
+    leadership.value.push(playerResult.value);
     displayAnimation.value = true;
   }
+
+  console.log("leadership:", leadership);
 };
 
 function applyDifficultyToBoard(board: Cell[][], difficulty: string): void {
@@ -227,18 +259,20 @@ function applyDifficultyToBoard(board: Cell[][], difficulty: string): void {
 }
 
 function getFixedCellCountByDifficulty(difficulty: string): number {
-  switch (difficulty) {
-    case "beginner":
-      return Math.floor(Math.random() * (40 - 36 + 1)) + 36;
-    case "intermediate":
-      return Math.floor(Math.random() * (36 - 32 + 1)) + 32;
-    case "hard":
-      return Math.floor(Math.random() * (32 - 28 + 1)) + 28;
-    case "expert":
-      return Math.floor(Math.random() * (28 - 24 + 1)) + 24;
-    default:
-      return 32;
-  }
+  // switch (difficulty) {
+  //   case "beginner":
+  //     return Math.floor(Math.random() * (40 - 36 + 1)) + 36;
+  //   case "intermediate":
+  //     return Math.floor(Math.random() * (36 - 32 + 1)) + 32;
+  //   case "hard":
+  //     return Math.floor(Math.random() * (32 - 28 + 1)) + 28;
+  //   case "expert":
+  //     return Math.floor(Math.random() * (28 - 24 + 1)) + 24;
+  //   default:
+  //     return 32;
+  // }
+  difficulty = "rfvrgfb";
+  return 79;
 }
 
 const handleScoreUpdate = (newScore: number) => (score.value = newScore);
@@ -311,7 +345,7 @@ function isValidMove(
   margin: 0.9375rem;
   padding: 0.625rem 1.25rem;
   font-size: 1rem;
-  background-color: #0c3e77;
+  /* background-color: #0c3e77; */
   color: white;
   border: none;
   font-weight: bold;
@@ -403,5 +437,30 @@ select {
 .fade-leave-to {
   opacity: 0;
   transform: scale(0.5);
+}
+
+.player-name-input {
+  padding: 0.6rem;
+  font-size: 1.2rem;
+  margin: 10px 0;
+  border-radius: 5px;
+  border: #0c3e77;
+  outline: auto;
+}
+
+.button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  background-color: #0c3e77;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background-color 0.3s ease;
+}
+
+.button:hover {
+  background-color: #0056b3;
 }
 </style>
