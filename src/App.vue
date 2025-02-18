@@ -135,6 +135,8 @@ let playerResult = ref({
   playerDifficulty: "beginner",
 });
 let sortedLeadership = [];
+let playerNameCount = 1;
+const defaultPlayerName = "player";
 onMounted(() => {
   // set default difficulty
   difficulty.value = "beginner";
@@ -156,7 +158,6 @@ function resetGame(): void {
   if (displayAnimation.value) {
     displayAnimation.value = false;
   }
-  playerName.value = "";
   // reset score
   score.value = 0;
   // reset available digits
@@ -169,15 +170,6 @@ function resetGame(): void {
     resetTimer();
     resetBoard();
   }, 700);
-  showIfPlayerNameEmpty();
-}
-
-function showIfPlayerNameEmpty() {
-  if (playerName.value) {
-    console.log("Starting game for player:", playerName.value);
-  } else {
-    alert("Please enter your name");
-  }
 }
 
 function startTimer(): void {
@@ -211,31 +203,8 @@ function resetBoard(): void {
   applyDifficultyToBoard(board.value, difficulty.value);
 }
 
-function fillBoard(board: number[][], row: number, column: number): boolean {
-  if (column === 9) {
-    row++;
-    column = 0;
-  }
-  if (row === 9) return true;
-
-  let digits: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9].sort(
-    () => Math.random() - 0.5
-  );
-
-  for (let digit of digits) {
-    if (isValidMove(board, row, column, digit)) {
-      board[row][column] = digit;
-      if (fillBoard(board, row, column + 1)) return true;
-      board[row][column] = 0;
-    }
-  }
-  return false;
-}
-
 function createBoard(): Cell[][] {
-  let board: number[][] = Array.from({ length: 9 }, () => Array(9).fill(0));
-
-  fillBoard(board, 0, 0);
+  const board: number[][] = generateBoard();
 
   // Convert board to Cell matrix from number matrix
   return board.map((row: number[]) =>
@@ -245,17 +214,163 @@ function createBoard(): Cell[][] {
     )
   );
 }
+function initializeBoard(defaultValue: number): number[][] {
+  return Array.from({ length: 9 }, () => Array(9).fill(defaultValue));
+}
+
+function convertBoardToSequences(
+  board: number[][]
+): [number[][], number[][], number[][]] {
+  const rows: number[][] = [];
+  const columns: number[][] = [];
+  const subGrids: number[][] = [];
+
+  // initialize sequences
+  for (let i = 0; i < 9; i++) {
+    rows.push([]);
+    columns.push([]);
+  }
+  for (let i = 0; i < 9; i++) {
+    subGrids.push([]);
+  }
+  // fill sequences
+  for (let i = 0; i < 9; i++) {
+    for (let j = 0; j < 9; j++) {
+      const value = board[i][j];
+      rows[i].push(value);
+      columns[j].push(value);
+      subGrids[Math.floor(i / 3) * 3 + Math.floor(j / 3)].push(value);
+    }
+  }
+
+  return [rows, columns, subGrids];
+}
+function validateBoard(board: number[][]): boolean {
+  if (!board || board.length !== 9 || board[0].length !== 9) {
+    return false;
+  }
+
+  // sequences
+  const [rows, columns, subGrids] = convertBoardToSequences(board);
+
+  // check sequences (rows, columns, subgrids) are valid
+  return [...rows, ...columns, ...subGrids].every(isValidSequence);
+}
+
+function isValidSequence(sequence: number[]): boolean {
+  const numbers = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  return (
+    sequence.length === 9 &&
+    new Set(sequence).size === 9 &&
+    sequence.every((value) => numbers.has(value))
+  );
+}
+
+function shuffleNumbers(numbers: number[]): void {
+  for (let i = numbers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+  }
+}
+
+function isPlacementValid(
+  board: number[][],
+  rowIndex: number,
+  columnIndex: number,
+  number: number
+): boolean {
+  // check if number already exists in row or column
+  for (let i = 0; i < 9; i++) {
+    if (board[rowIndex][i] === number || board[i][columnIndex] === number) {
+      return false;
+    }
+  }
+
+  // check if number already exists in subgrid
+  const startRowIndex = Math.floor(rowIndex / 3) * 3;
+  const startColumnIndex = Math.floor(columnIndex / 3) * 3;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (board[startRowIndex + i][startColumnIndex + j] === number) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function fillBoard(board: number[][], defaultValue: number): boolean {
+  let filled = false;
+
+  for (let rowIndex = 0; rowIndex < 9; rowIndex++) {
+    for (let columnIndex = 0; columnIndex < 9; columnIndex++) {
+      if (board[rowIndex][columnIndex] === defaultValue) {
+        // Shuffle possible numbers for randomness
+        const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        shuffleNumbers(numbers);
+
+        let validNumberFound = false;
+        for (const number of numbers) {
+          if (isPlacementValid(board, rowIndex, columnIndex, number)) {
+            board[rowIndex][columnIndex] = number;
+            validNumberFound = true;
+            filled = true;
+
+            // move to the next cell
+            break;
+          }
+        }
+
+        // exit if no valid number found
+        if (!validNumberFound) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return filled;
+}
+
+function generateBoard(): number[][] {
+  const defaultValue = -1;
+
+  // initialize board
+  let board: number[][] = initializeBoard(defaultValue);
+
+  // try to generate valid board
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    // fill board
+    let filled: boolean = fillBoard(board, defaultValue);
+
+    // validate board if board filled
+    if (filled && validateBoard(board)) {
+      return board;
+    }
+    // reset board if board not filled
+    else {
+      board = initializeBoard(defaultValue);
+    }
+  }
+}
 
 const handleFinishedGame = (isGameFinished: boolean) => {
   gameFinished.value = isGameFinished;
+  let name =
+    playerName.value !== ""
+      ? playerName.value
+      : defaultPlayerName + playerNameCount;
   playerResult.value = {
     playerScore: score.value,
-    name: playerName.value,
+    name: name,
     playerDifficulty: difficulty.value,
   };
   if (gameFinished.value) {
     stopTimer();
     leadership.value.push(playerResult.value);
+    playerNameCount++;
     sortedLeadership = leadership.value.sort(
       (a, b) => a.playerScore - b.playerScore
     );
@@ -307,7 +422,7 @@ function getFixedCellCountByDifficulty(difficulty: string): number {
   //   default:
   //     return 32;
   // }
-  difficulty = "rfvrgfb";
+  difficulty = "hdfb";
   return 79;
 }
 
@@ -348,9 +463,9 @@ function isValidMove(
 <style>
 .container {
   display: flex;
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
-  flex-wrap: wrap; /* Makes it responsive */
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 .header {
@@ -381,7 +496,6 @@ function isValidMove(
   margin: 0.9375rem;
   padding: 0.625rem 1.25rem;
   font-size: 1rem;
-  /* background-color: #0c3e77; */
   color: white;
   border: none;
   font-weight: bold;
@@ -414,9 +528,9 @@ select {
   position: relative; /* So the animation is positioned within this */
   display: inline-block;
   display: flex;
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
-  flex-wrap: wrap; /* Makes it responsive */
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 .animation-content {
@@ -424,7 +538,7 @@ select {
   padding: 2rem;
   border-radius: 10px;
   width: 90%;
-  max-width: 400px; /* Keeps it responsive */
+  max-width: 400px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 .animation {
@@ -449,16 +563,16 @@ select {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   color: white;
   font-size: 2rem;
   font-weight: bold;
-  backdrop-filter: blur(5px); /* Optional blur effect */
+  backdrop-filter: blur(5px);
   z-index: 10;
-  pointer-events: none; /* So clicks pass through */
+  pointer-events: none;
 }
 /* Animation */
 .fade-enter-active,
@@ -502,6 +616,9 @@ select {
   padding: 20px;
   background-color: #f4f4f4;
   border-radius: 8px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  height: 20em;
 }
 h2 {
   text-align: center;
