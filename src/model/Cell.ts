@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 class Cell {
   // default values
   actualValue = 0;

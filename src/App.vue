@@ -370,8 +370,6 @@ const handleFinishedGame = (isGameFinished: boolean) => {
 
     displayAnimation.value = true;
   }
-
-  console.log("leadership:", leadership);
 };
 
 function applyDifficultyToBoard(board: Cell[][], difficulty: string): void {
@@ -404,20 +402,18 @@ function applyDifficultyToBoard(board: Cell[][], difficulty: string): void {
 }
 
 function getFixedCellCountByDifficulty(difficulty: string): number {
-  // switch (difficulty) {
-  //   case "beginner":
-  //     return Math.floor(Math.random() * (40 - 36 + 1)) + 36;
-  //   case "intermediate":
-  //     return Math.floor(Math.random() * (36 - 32 + 1)) + 32;
-  //   case "hard":
-  //     return Math.floor(Math.random() * (32 - 28 + 1)) + 28;
-  //   case "expert":
-  //     return Math.floor(Math.random() * (28 - 24 + 1)) + 24;
-  //   default:
-  //     return 32;
-  // }
-  difficulty = "hdfb";
-  return 79;
+  switch (difficulty) {
+    case "beginner":
+      return Math.floor(Math.random() * (40 - 36 + 1)) + 36;
+    case "intermediate":
+      return Math.floor(Math.random() * (36 - 32 + 1)) + 32;
+    case "hard":
+      return Math.floor(Math.random() * (32 - 28 + 1)) + 28;
+    case "expert":
+      return Math.floor(Math.random() * (28 - 24 + 1)) + 24;
+    default:
+      return 32;
+  }
 }
 
 const handleScoreUpdate = (newScore: number) => (score.value = newScore);
