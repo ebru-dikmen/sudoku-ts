@@ -53,34 +53,16 @@
 
     <div class="leaderboard">
       <h2>Leadersboard:</h2>
-      <ul>
-        <li v-for="(player, index) in sortedLeadership" :key="index">
-          <div v-if="player.playerDifficulty === 'beginner'">
-            <h3>Beginner:</h3>
+      <div v-for="(group, difficulty) in groupedLeadership" :key="difficulty">
+        <h3>{{ capitalize(difficulty) }}:</h3>
+        <ul>
+          <li v-for="(player, index) in group" :key="index">
             <span class="rank">{{ index + 1 }}.</span>
             <span class="name">{{ player.name }} - </span>
             <span class="score">{{ player.playerScore }}</span>
-          </div>
-          <div v-if="player.playerDifficulty === 'intermediate'">
-            <h3>intermediate:</h3>
-            <span class="rank">{{ index + 1 }}.</span>
-            <span class="name">{{ player.name }} - </span>
-            <span class="score">{{ player.playerScore }}</span>
-          </div>
-          <div v-if="player.playerDifficulty === 'hard'">
-            <h3>hard:</h3>
-            <span class="rank">{{ index + 1 }}.</span>
-            <span class="name">{{ player.name }} - </span>
-            <span class="score">{{ player.playerScore }}</span>
-          </div>
-          <div v-if="player.playerDifficulty === 'expert'">
-            <h3>expert:</h3>
-            <span class="rank">{{ index + 1 }}.</span>
-            <span class="name">{{ player.name }} - </span>
-            <span class="score">{{ player.playerScore }}</span>
-          </div>
-        </li>
-      </ul>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
   <div class="container">
@@ -109,7 +91,7 @@
 <script setup lang="ts">
 import Board from "./components/GameBoard.vue";
 import Cell from "./model/Cell";
-import { ref, onMounted, onUnmounted, Ref } from "vue";
+import { ref, onMounted, onUnmounted, Ref, computed } from "vue";
 
 const score: Ref<number> = ref(0);
 // eslint-disable-next-line
@@ -134,9 +116,23 @@ let playerResult = ref({
   name: "",
   playerDifficulty: "beginner",
 });
-let sortedLeadership = [];
 let playerNameCount = 1;
 const defaultPlayerName = "player";
+
+const groupedLeadership = computed(() => {
+  return leadership.value.reduce((groups, player) => {
+    if (!groups[player.playerDifficulty]) {
+      groups[player.playerDifficulty] = [];
+    }
+    groups[player.playerDifficulty].push(player);
+    return groups;
+  }, {} as Record<string, { playerScore: number; name: string; playerDifficulty: string }[]>);
+});
+
+const capitalize = (str: string): string => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
 onMounted(() => {
   // set default difficulty
   difficulty.value = "beginner";
@@ -371,9 +367,7 @@ const handleFinishedGame = (isGameFinished: boolean) => {
     stopTimer();
     leadership.value.push(playerResult.value);
     playerNameCount++;
-    sortedLeadership = leadership.value.sort(
-      (a, b) => a.playerScore - b.playerScore
-    );
+
     displayAnimation.value = true;
   }
 
@@ -492,9 +486,14 @@ function isValidMove(
   padding: 0.625rem 1.25rem;
   font-size: 1rem;
 }
+
+.button:hover {
+  background-color: #3d82cc;
+}
 .button {
-  margin: 0.9375rem;
-  padding: 0.625rem 1.25rem;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  background-color: #0c3e77;
   font-size: 1rem;
   color: white;
   border: none;
@@ -508,9 +507,6 @@ function isValidMove(
   background-color: #ccc; /* Gray when disabled */
   cursor: not-allowed;
   opacity: 0.6;
-}
-.button:hover {
-  background-color: #0c3e77;
 }
 
 select {
@@ -557,23 +553,6 @@ select {
   z-index: 0;
   pointer-events: none;
 }
-.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  font-size: 2rem;
-  font-weight: bold;
-  backdrop-filter: blur(5px);
-  z-index: 10;
-  pointer-events: none;
-}
 /* Animation */
 .fade-enter-active,
 .fade-leave-active {
@@ -597,21 +576,6 @@ select {
   outline: auto;
 }
 
-.button {
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  background-color: #0c3e77;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 1rem;
-  transition: background-color 0.3s ease;
-}
-
-.button:hover {
-  background-color: #0056b3;
-}
 .leaderboard {
   padding: 20px;
   background-color: #f4f4f4;
@@ -623,23 +587,6 @@ select {
 h2 {
   text-align: center;
   margin-bottom: 20px;
-}
-
-table,
-ul {
-  width: 100%;
-  margin: 0 auto;
-  border-collapse: collapse;
-}
-
-th,
-td,
-li {
-  padding: 10px;
-}
-th {
-  background-color: #0c3e77;
-  color: white;
 }
 
 .rank {
