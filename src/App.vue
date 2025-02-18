@@ -5,10 +5,11 @@
   <div class="container">
     <div>
       <input
+        :disabled="isTriggerPause"
+        class="player-name-input"
         type="text"
         v-model="playerName"
         placeholder="Player Name"
-        class="player-name-input"
       />
     </div>
     <div class="difficulty">
@@ -38,7 +39,7 @@
     </button>
   </div>
 
-  <div class="board-container" :disabled="isTriggerPause">
+  <div class="board-container">
     <Board
       :disabled="isTriggerPause"
       :initialBoard="board"
@@ -49,6 +50,38 @@
       @digitNotAvailable="handleDigitNotAvailable"
       ref="hint"
     />
+
+    <div class="leaderboard">
+      <h2>Leadersboard:</h2>
+      <ul>
+        <li v-for="(player, index) in sortedLeadership" :key="index">
+          <div v-if="player.playerDifficulty === 'beginner'">
+            <h3>Beginner:</h3>
+            <span class="rank">{{ index + 1 }}.</span>
+            <span class="name">{{ player.name }} - </span>
+            <span class="score">{{ player.playerScore }}</span>
+          </div>
+          <div v-if="player.playerDifficulty === 'intermediate'">
+            <h3>intermediate:</h3>
+            <span class="rank">{{ index + 1 }}.</span>
+            <span class="name">{{ player.name }} - </span>
+            <span class="score">{{ player.playerScore }}</span>
+          </div>
+          <div v-if="player.playerDifficulty === 'hard'">
+            <h3>hard:</h3>
+            <span class="rank">{{ index + 1 }}.</span>
+            <span class="name">{{ player.name }} - </span>
+            <span class="score">{{ player.playerScore }}</span>
+          </div>
+          <div v-if="player.playerDifficulty === 'expert'">
+            <h3>expert:</h3>
+            <span class="rank">{{ index + 1 }}.</span>
+            <span class="name">{{ player.name }} - </span>
+            <span class="score">{{ player.playerScore }}</span>
+          </div>
+        </li>
+      </ul>
+    </div>
   </div>
   <div class="container">
     <transition name="fade">
@@ -93,7 +126,7 @@ const board: Ref<Cell[][]> = ref(
 let intervalId = -1;
 let isTriggerPause = ref(false);
 let playerName = ref("");
-const leadership: Ref<
+let leadership: Ref<
   { playerScore: number; name: string; playerDifficulty: string }[]
 > = ref([]);
 let playerResult = ref({
@@ -101,10 +134,10 @@ let playerResult = ref({
   name: "",
   playerDifficulty: "beginner",
 });
+let sortedLeadership = [];
 onMounted(() => {
   // set default difficulty
   difficulty.value = "beginner";
-
   // initialize game
   resetGame();
 });
@@ -120,31 +153,31 @@ function selectDifficulty(event: Event): void {
 
 // initialize game
 function resetGame(): void {
-  if (playerName.value) {
-    console.log("Starting game for player:", playerName.value);
-    // Initialize game with playerName or any other logic you want
-  } else {
-    alert("Please enter your name");
-  }
   if (displayAnimation.value) {
     displayAnimation.value = false;
   }
+  playerName.value = "";
   // reset score
   score.value = 0;
-
   // reset available digits
   availableDigits.value = Array(9).fill(true);
-
   // hide animation
   displayAnimation.value = false;
-
   // reset game status
   gameFinished.value = false;
-
   setTimeout(() => {
     resetTimer();
     resetBoard();
   }, 700);
+  showIfPlayerNameEmpty();
+}
+
+function showIfPlayerNameEmpty() {
+  if (playerName.value) {
+    console.log("Starting game for player:", playerName.value);
+  } else {
+    alert("Please enter your name");
+  }
 }
 
 function startTimer(): void {
@@ -223,6 +256,9 @@ const handleFinishedGame = (isGameFinished: boolean) => {
   if (gameFinished.value) {
     stopTimer();
     leadership.value.push(playerResult.value);
+    sortedLeadership = leadership.value.sort(
+      (a, b) => a.playerScore - b.playerScore
+    );
     displayAnimation.value = true;
   }
 
@@ -371,7 +407,6 @@ select {
 
 .difficulty {
   display: flex;
-  justify-content: center;
   max-height: auto;
 }
 
@@ -441,9 +476,9 @@ select {
 
 .player-name-input {
   padding: 0.6rem;
-  font-size: 1.2rem;
-  margin: 10px 0;
-  border-radius: 5px;
+  font-size: 0.8rem;
+  margin: 1em 0;
+  border-radius: 1em;
   border: #0c3e77;
   outline: auto;
 }
@@ -462,5 +497,35 @@ select {
 
 .button:hover {
   background-color: #0056b3;
+}
+.leaderboard {
+  padding: 20px;
+  background-color: #f4f4f4;
+  border-radius: 8px;
+}
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+table,
+ul {
+  width: 100%;
+  margin: 0 auto;
+  border-collapse: collapse;
+}
+
+th,
+td,
+li {
+  padding: 10px;
+}
+th {
+  background-color: #0c3e77;
+  color: white;
+}
+
+.rank {
+  font-weight: bold;
 }
 </style>
