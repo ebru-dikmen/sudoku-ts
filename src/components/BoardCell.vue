@@ -6,7 +6,7 @@
     max="9"
     v-model="currentValue"
     @input="updateValueIfValid"
-    :disabled="isFixed || isHint"
+    :disabled="isFixed || isHint || disabled"
     :class="{
       fixed: isFixed,
       correct: gameFinished && isCorrect,
@@ -31,6 +31,7 @@ const props = withDefaults(
     isError: boolean;
     isHint: boolean;
     gameFinished: boolean;
+    disabled: boolean;
   }>(),
   {
     value: "",
@@ -39,6 +40,7 @@ const props = withDefaults(
     isError: false,
     isHint: false,
     gameFinished: false,
+    disabled: false,
   }
 );
 

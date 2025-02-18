@@ -23,6 +23,7 @@
         :isError="cell.isError"
         :isHint="cell.isHint"
         :game-finished="gameFinished"
+        :disabled="disabled"
         @updateValue="(newValue:string) => updateCellValue(cell, newValue)"
       />
     </div>
@@ -62,11 +63,13 @@ const props = withDefaults(
     initialBoard: Array<Cell[]>;
     score: number;
     timeSpent: number;
+    disabled: boolean;
   }>(),
   {
     initialBoard: () => Array.from({ length: 9 }, () => Array(9).fill({})),
     score: 0,
     timeSpent: 0,
+    disabled: false,
   }
 );
 

@@ -4,7 +4,11 @@
   </div>
   <div class="container">
     <div class="difficulty">
-      <select v-model="difficulty" @change="selectDifficulty">
+      <select
+        v-model="difficulty"
+        @change="selectDifficulty"
+        :disabled="isTriggerPause"
+      >
         <option value="beginner">Beginner</option>
         <option value="intermediate">Intermediate</option>
         <option value="hard">Hard</option>
@@ -17,15 +21,18 @@
     <button
       class="button"
       @click="showHintIfAvailable"
-      :disabled="gameFinished"
+      :disabled="gameFinished || isTriggerPause"
     >
       Hint ({{ 10 - hintCellCount }})
     </button>
-    <button class="button" @click="resetGame">Restart</button>
+    <button class="button" :disabled="isTriggerPause" @click="resetGame">
+      Restart
+    </button>
   </div>
 
-  <div class="container" v-if="!gameFinished">
+  <div class="container" v-show="!gameFinished" :disabled="isTriggerPause">
     <Board
+      :disabled="isTriggerPause"
       :initialBoard="board"
       :timeSpent="timeSpent"
       @updateScore="handleScoreUpdate"
@@ -74,10 +81,8 @@ const displayAnimation = ref(false);
 const board: Ref<Cell[][]> = ref(
   Array.from({ length: 9 }, () => Array(9).fill({}))
 );
-
 let intervalId = -1;
-
-let isTogglePause = ref(false);
+let isTriggerPause = ref(false);
 
 onMounted(() => {
   // set default difficulty
@@ -113,7 +118,7 @@ function resetGame(): void {
   setTimeout(() => {
     resetTimer();
     resetBoard();
-  }, 700);
+  }, 800);
 }
 
 function startTimer(): void {
@@ -135,8 +140,8 @@ function resetTimer(): void {
 }
 
 function pauseTimer() {
-  isTogglePause.value = !isTogglePause.value;
-  if (isTogglePause.value) {
+  isTriggerPause.value = !isTriggerPause.value;
+  if (isTriggerPause.value) {
     stopTimer();
   } else {
     startTimer();
@@ -221,18 +226,20 @@ function applyDifficultyToBoard(board: Cell[][], difficulty: string): void {
 }
 
 function getFixedCellCountByDifficulty(difficulty: string): number {
-  switch (difficulty) {
-    case "beginner":
-      return Math.floor(Math.random() * (40 - 36 + 1)) + 36;
-    case "intermediate":
-      return Math.floor(Math.random() * (36 - 32 + 1)) + 32;
-    case "hard":
-      return Math.floor(Math.random() * (32 - 28 + 1)) + 28;
-    case "expert":
-      return Math.floor(Math.random() * (28 - 24 + 1)) + 24;
-    default:
-      return 32;
-  }
+  // switch (difficulty) {
+  //   case "beginner":
+  //     return Math.floor(Math.random() * (40 - 36 + 1)) + 36;
+  //   case "intermediate":
+  //     return Math.floor(Math.random() * (36 - 32 + 1)) + 32;
+  //   case "hard":
+  //     return Math.floor(Math.random() * (32 - 28 + 1)) + 28;
+  //   case "expert":
+  //     return Math.floor(Math.random() * (28 - 24 + 1)) + 24;
+  //   default:
+  //     return 32;
+  // }
+  difficulty = "rr";
+  return 79;
 }
 
 const handleScoreUpdate = (newScore: number) => (score.value = newScore);
@@ -314,7 +321,11 @@ function isValidMove(
   border-radius: 5px;
   transition: all 0.3s ease-in-out;
 }
-
+.button:disabled {
+  background-color: #ccc; /* Gray when disabled */
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 .button:hover {
   background-color: #0056b3;
 }
