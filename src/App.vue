@@ -30,7 +30,7 @@
     </button>
   </div>
 
-  <div class="container" v-show="!gameFinished" :disabled="isTriggerPause">
+  <div class="board-container" :disabled="isTriggerPause">
     <Board
       :disabled="isTriggerPause"
       :initialBoard="board"
@@ -44,10 +44,11 @@
   </div>
   <div class="container">
     <transition name="fade">
-      <div v-if="displayAnimation" class="game-over-message">
-        <h1>Game Over</h1>
-        <p>Your Score: {{ score }}</p>
-        <button @click="resetGame">Restart</button>
+      <div v-if="displayAnimation" class="animation">
+        <div class="animation-content">
+          <h1>Game Over</h1>
+          <p>Your Score: {{ score }}</p>
+        </div>
       </div>
     </transition>
   </div>
@@ -118,7 +119,7 @@ function resetGame(): void {
   setTimeout(() => {
     resetTimer();
     resetBoard();
-  }, 800);
+  }, 700);
 }
 
 function startTimer(): void {
@@ -289,11 +290,11 @@ function isValidMove(
   align-items: center;
   justify-content: space-between;
   padding: 15px 20px;
-  background-color: rgb(235, 222, 32);
-  color: white;
+  background-color: #ffd700;
+  color: #0c3e77;
   font-size: 20px;
   font-weight: bold;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 4px 6px #0c3e77;
 }
 .digit-selection {
   margin-top: 10px;
@@ -327,7 +328,7 @@ function isValidMove(
   opacity: 0.6;
 }
 .button:hover {
-  background-color: #0056b3;
+  background-color: #0c3e77;
 }
 
 select {
@@ -342,15 +343,56 @@ select {
   max-height: auto;
 }
 
-.game-over-message {
-  background: rgb(235, 222, 32);
-  color: white;
-  padding: 3.125rem;
-  border-radius: 0.625rem;
+.board-container {
+  position: relative; /* So the animation is positioned within this */
   display: inline-block;
-  justify-content: center;
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  flex-wrap: wrap; /* Makes it responsive */
+  gap: 0.5rem;
 }
-
+.animation-content {
+  color: #0c3e77;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px; /* Keeps it responsive */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+.animation {
+  background: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-wrap: break-word;
+  font-size: 2rem;
+  font-weight: bold;
+  z-index: 0;
+  pointer-events: none;
+}
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  backdrop-filter: blur(5px); /* Optional blur effect */
+  z-index: 10;
+  pointer-events: none; /* So clicks pass through */
+}
 /* Animation */
 .fade-enter-active,
 .fade-leave-active {
@@ -362,6 +404,6 @@ select {
 }
 .fade-leave-to {
   opacity: 0;
-  transform: scale(1.5);
+  transform: scale(0.5);
 }
 </style>
